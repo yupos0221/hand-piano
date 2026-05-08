@@ -21,6 +21,7 @@
       --green-dark: #0F6E56;
       --green-bg: #04342C;
       --amber: #EF9F27;
+      --red: #e24b4a;
       --radius-md: 8px;
       --radius-lg: 12px;
     }
@@ -53,6 +54,31 @@
     }
 
     .logo span { color: var(--green-light); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #reset-btn {
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text2);
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    #reset-btn:hover { 
+      background: #2a2a32; 
+      border-color: var(--red);
+      color: var(--red); 
+    }
 
     #status {
       display: flex;
@@ -213,6 +239,22 @@
     .note-cell.active .note-hint { color: var(--green-dark); }
 
     /* guide */
+    .guide-section-title {
+      font-size: 9px;
+      color: var(--text3);
+      margin-bottom: 6px;
+      margin-top: 2px;
+      letter-spacing: 0.06em;
+    }
+
+    .guide-section-title:first-child {
+      margin-top: 0;
+    }
+
+    .guide-section-title + .guide-section-title {
+      margin-top: 10px;
+    }
+
     .guide-row {
       display: flex;
       align-items: center;
@@ -304,9 +346,12 @@
 
 <header>
   <div class="logo">Hand<span>Piano</span></div>
-  <div id="status">
-    <div id="status-dot"></div>
-    <span id="status-text">カメラ未起動</span>
+  <div class="header-right">
+    <button id="reset-btn" title="全ての音をリセット">🔄 リセット</button>
+    <div id="status">
+      <div id="status-dot"></div>
+      <span id="status-text">カメラ未起動</span>
+    </div>
   </div>
 </header>
 
@@ -358,9 +403,10 @@ const NOTE_MAP = [
 
 const FINGERTIPS  = [4, 8, 12, 16, 20];
 
-// ── AudioContext ───────────────────────────────────────
+// ── AudioContext（改善版） ─────────────────────────────
 let audioCtx = null;
 const activeOsc = {};
+let noteReleaseTimers = {}; // 音の解放タイマー
 
 function getCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -368,39 +414,110 @@ function getCtx() {
 }
 
 function startNote(freq, key) {
-  if (activeOsc[key]) return;
   const ctx = getCtx();
+  
+  // 既に同じ音が鳴っている場合は一旦停止して再スタート（8分音符対応）
+  if (activeOsc[key]) {
+    forceStopNote(key);
+  }
+  
+  // タイマーをクリア
+  if (noteReleaseTimers[key]) {
+    clearTimeout(noteReleaseTimers[key]);
+    delete noteReleaseTimers[key];
+  }
 
   const osc  = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = 'sine';
   osc.frequency.value = freq;
   gain.gain.setValueAtTime(0, ctx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.025);
+  gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.02);
 
   const osc2  = ctx.createOscillator();
   const gain2 = ctx.createGain();
   osc2.type = 'triangle';
   osc2.frequency.value = freq * 2;
   gain2.gain.setValueAtTime(0, ctx.currentTime);
-  gain2.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.025);
+  gain2.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.02);
 
   osc.connect(gain).connect(ctx.destination);
   osc2.connect(gain2).connect(ctx.destination);
-  osc.start(); osc2.start();
-  activeOsc[key] = { osc, gain, osc2, gain2 };
+  osc.start(); 
+  osc2.start();
+  
+  activeOsc[key] = { osc, gain, osc2, gain2, freq, startTime: ctx.currentTime };
 }
 
 function stopNote(key) {
   const p = activeOsc[key];
   if (!p) return;
+  
   const ctx = getCtx();
-  p.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
-  p.gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
-  setTimeout(() => {
-    try { p.osc.stop(); p.osc2.stop(); } catch(e) {}
+  
+  try {
+    // 現在のゲイン値を取得してスムーズにフェードアウト
+    const currentGain = p.gain.gain.value;
+    const currentGain2 = p.gain2.gain.value;
+    
+    p.gain.gain.cancelScheduledValues(ctx.currentTime);
+    p.gain2.gain.cancelScheduledValues(ctx.currentTime);
+    p.gain.gain.setValueAtTime(currentGain, ctx.currentTime);
+    p.gain2.gain.setValueAtTime(currentGain2, ctx.currentTime);
+    p.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+    p.gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.05);
+  } catch(e) {}
+  
+  noteReleaseTimers[key] = setTimeout(() => {
+    try {
+      p.osc.stop();
+      p.osc2.stop();
+      p.osc.disconnect();
+      p.osc2.disconnect();
+      p.gain.disconnect();
+      p.gain2.disconnect();
+    } catch(e) {}
     delete activeOsc[key];
-  }, 100);
+    delete noteReleaseTimers[key];
+  }, 60);
+}
+
+function forceStopNote(key) {
+  const p = activeOsc[key];
+  if (!p) return;
+  
+  if (noteReleaseTimers[key]) {
+    clearTimeout(noteReleaseTimers[key]);
+    delete noteReleaseTimers[key];
+  }
+  
+  try {
+    const ctx = getCtx();
+    p.gain.gain.cancelScheduledValues(ctx.currentTime);
+    p.gain2.gain.cancelScheduledValues(ctx.currentTime);
+    p.gain.gain.setValueAtTime(0, ctx.currentTime);
+    p.gain2.gain.setValueAtTime(0, ctx.currentTime);
+    p.osc.stop();
+    p.osc2.stop();
+    p.osc.disconnect();
+    p.osc2.disconnect();
+    p.gain.disconnect();
+    p.gain2.disconnect();
+  } catch(e) {}
+  delete activeOsc[key];
+}
+
+function forceStopAllNotes() {
+  // 全てのタイマーをクリア
+  Object.keys(noteReleaseTimers).forEach(key => {
+    clearTimeout(noteReleaseTimers[key]);
+  });
+  noteReleaseTimers = {};
+  
+  // 全てのオシレーターを強制停止
+  Object.keys(activeOsc).forEach(key => {
+    forceStopNote(key);
+  });
 }
 
 // ── UI 構築 ────────────────────────────────────────────
@@ -420,9 +537,8 @@ NOTE_MAP.forEach((n, i) => {
 const rightHand = NOTE_MAP.filter(n => n.hand === 'Right');
 const leftHand = NOTE_MAP.filter(n => n.hand === 'Left');
 
-// 右手セクション
 const rightTitle = document.createElement('div');
-rightTitle.style.cssText = 'font-size: 9px; color: var(--text3); margin-bottom: 6px; margin-top: 2px; letter-spacing: 0.06em;';
+rightTitle.className = 'guide-section-title';
 rightTitle.textContent = '右手';
 guide.appendChild(rightTitle);
 
@@ -433,9 +549,8 @@ rightHand.forEach(n => {
   guide.appendChild(row);
 });
 
-// 左手セクション
 const leftTitle = document.createElement('div');
-leftTitle.style.cssText = 'font-size: 9px; color: var(--text3); margin-bottom: 6px; margin-top: 10px; letter-spacing: 0.06em;';
+leftTitle.className = 'guide-section-title';
 leftTitle.textContent = '左手';
 guide.appendChild(leftTitle);
 
@@ -481,7 +596,6 @@ function detectPinches(lm, handedness) {
   const pinched = new Set();
   const ref = dist(lm[0], lm[9]);
   NOTE_MAP.forEach((n, ni) => {
-    // 手が一致する音階のみ判定
     if (n.hand !== handedness) return;
     const d = dist(lm[FINGERTIPS[n.fingers[0]]], lm[FINGERTIPS[n.fingers[1]]]);
     if (d < ref * 0.38) pinched.add(ni);
@@ -549,12 +663,23 @@ const ctx2d    = canvas.getContext('2d');
 const placeholder = document.getElementById('placeholder');
 const errorMsg = document.getElementById('error-msg');
 const startBtn = document.getElementById('start-btn');
+const resetBtn = document.getElementById('reset-btn');
 const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
 let lastPinched = new Set();
 let lastDetectionTime = 0;
-const TRACKING_TIMEOUT = 200; // 200msトラッキングが途切れたら音を停止
+const TRACKING_TIMEOUT = 150; // 150msトラッキングが途切れたら音を停止
+
+// リセットボタン
+resetBtn.addEventListener('click', () => {
+  forceStopAllNotes();
+  lastPinched.clear();
+  NOTE_MAP.forEach((_, i) => {
+    cellMap[i].classList.remove('active');
+  });
+  console.log('全ての音をリセットしました');
+});
 
 function onResults(results) {
   const w = canvas.width;
@@ -563,14 +688,14 @@ function onResults(results) {
   ctx2d.drawImage(results.image, 0, 0, w, h);
 
   let allPinched = new Set();
+  const now = Date.now();
 
   if (results.multiHandLandmarks?.length) {
-    lastDetectionTime = Date.now();
+    lastDetectionTime = now;
     statusDot.className = 'detecting';
     statusText.textContent = `手を検出中 (${results.multiHandLandmarks.length}本)`;
 
     results.multiHandLandmarks.forEach((lm, idx) => {
-      // MediaPipeは左右反転するので注意（RightとLeftが逆）
       const handedness = results.multiHandedness?.[idx]?.label || 'Right';
       const pinched = detectPinches(lm, handedness);
       pinched.forEach(p => allPinched.add(p));
@@ -578,10 +703,13 @@ function onResults(results) {
     });
   } else {
     // 手が検出されない場合
-    if (Date.now() - lastDetectionTime > TRACKING_TIMEOUT) {
+    if (now - lastDetectionTime > TRACKING_TIMEOUT) {
       // トラッキング途切れ: 全ての音を停止
-      lastPinched.forEach(ni => stopNote(ni));
-      lastPinched.clear();
+      if (lastPinched.size > 0) {
+        console.log('トラッキング途切れ: 音を停止');
+        lastPinched.forEach(ni => stopNote(ni));
+        lastPinched.clear();
+      }
     }
     statusDot.className = 'active';
     statusText.textContent = 'カメラ稼働中';
@@ -589,12 +717,16 @@ function onResults(results) {
 
   // 新しくピンチされた音を開始
   allPinched.forEach(ni => { 
-    if (!lastPinched.has(ni)) startNote(NOTE_MAP[ni].freq, ni); 
+    if (!lastPinched.has(ni)) {
+      startNote(NOTE_MAP[ni].freq, ni);
+    }
   });
   
   // ピンチが解除された音を停止
   lastPinched.forEach(ni => { 
-    if (!allPinched.has(ni)) stopNote(ni); 
+    if (!allPinched.has(ni)) {
+      stopNote(ni);
+    }
   });
   
   lastPinched = allPinched;
@@ -604,7 +736,6 @@ function onResults(results) {
   });
 
   animateBars([...allPinched]);
-  requestAnimationFrame(() => animateBars([...allPinched]));
 }
 
 async function startCamera() {
@@ -620,7 +751,7 @@ async function startCamera() {
       maxNumHands: 2,
       modelComplexity: 1,
       minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.6,
+      minTrackingConfidence: 0.65,
     });
     hands.onResults(onResults);
 
@@ -637,6 +768,7 @@ async function startCamera() {
 
     statusDot.className = 'active';
     statusText.textContent = 'カメラ稼働中';
+    lastDetectionTime = Date.now();
 
     (async function loop() {
       if (video.readyState >= 2) {
@@ -659,7 +791,15 @@ async function startCamera() {
 
 startBtn.addEventListener('click', startCamera);
 
-setInterval(() => animateBars([]), 50);
+// 定期的にビジュアライザーを更新
+setInterval(() => {
+  if (!video.srcObject) animateBars([]);
+}, 50);
+
+// ページを離れる時に全ての音を停止
+window.addEventListener('beforeunload', () => {
+  forceStopAllNotes();
+});
 </script>
 </body>
 </html>
