@@ -328,7 +328,7 @@
       <div id="notes-grid"></div>
     </div>
     <div class="card">
-      <div class="card-label">ピンチ対応表（右手）</div>
+      <div class="card-label">ピンチ対応表</div>
       <div id="guide"></div>
     </div>
   </div>
@@ -346,14 +346,14 @@
 <script>
 // ── 音階定義 ───────────────────────────────────────────
 const NOTE_MAP = [
-  { name: 'ド',   freq: 261.63, fingers: [0, 1], label: '親指＋人差し指' },
-  { name: 'レ',   freq: 293.66, fingers: [0, 2], label: '親指＋中指' },
-  { name: 'ミ',   freq: 329.63, fingers: [0, 3], label: '親指＋薬指' },
-  { name: 'ファ', freq: 349.23, fingers: [0, 4], label: '親指＋小指' },
-  { name: 'ソ',   freq: 392.00, fingers: [1, 2], label: '人差し指＋中指' },
-  { name: 'ラ',   freq: 440.00, fingers: [1, 3], label: '人差し指＋薬指' },
-  { name: 'シ',   freq: 493.88, fingers: [1, 4], label: '人差し指＋小指' },
-  { name: 'ド′',  freq: 523.25, fingers: [2, 3], label: '中指＋薬指' },
+  { name: 'ド',   freq: 261.63, fingers: [0, 1], label: '親指＋人差し指', hand: 'Right' },
+  { name: 'レ',   freq: 293.66, fingers: [0, 2], label: '親指＋中指', hand: 'Right' },
+  { name: 'ミ',   freq: 329.63, fingers: [0, 3], label: '親指＋薬指', hand: 'Right' },
+  { name: 'ファ', freq: 349.23, fingers: [0, 4], label: '親指＋小指', hand: 'Right' },
+  { name: 'ソ',   freq: 392.00, fingers: [0, 1], label: '親指＋人差し指', hand: 'Left' },
+  { name: 'ラ',   freq: 440.00, fingers: [0, 2], label: '親指＋中指', hand: 'Left' },
+  { name: 'シ',   freq: 493.88, fingers: [0, 3], label: '親指＋薬指', hand: 'Left' },
+  { name: 'ド′',  freq: 523.25, fingers: [0, 4], label: '親指＋小指', hand: 'Left' },
 ];
 
 const FINGERTIPS  = [4, 8, 12, 16, 20];
@@ -414,7 +414,32 @@ NOTE_MAP.forEach((n, i) => {
   cell.innerHTML = `<span class="note-name">${n.name}</span><span class="note-hint">${n.label.replace('＋', '+')}</span>`;
   notesGrid.appendChild(cell);
   cellMap[i] = cell;
+});
 
+// ガイドを右手と左手に分けて表示
+const rightHand = NOTE_MAP.filter(n => n.hand === 'Right');
+const leftHand = NOTE_MAP.filter(n => n.hand === 'Left');
+
+// 右手セクション
+const rightTitle = document.createElement('div');
+rightTitle.style.cssText = 'font-size: 9px; color: var(--text3); margin-bottom: 6px; margin-top: 2px; letter-spacing: 0.06em;';
+rightTitle.textContent = '右手';
+guide.appendChild(rightTitle);
+
+rightHand.forEach(n => {
+  const row = document.createElement('div');
+  row.className = 'guide-row';
+  row.innerHTML = `<span class="guide-fingers">${n.label}</span><span class="guide-note">${n.name}</span>`;
+  guide.appendChild(row);
+});
+
+// 左手セクション
+const leftTitle = document.createElement('div');
+leftTitle.style.cssText = 'font-size: 9px; color: var(--text3); margin-bottom: 6px; margin-top: 10px; letter-spacing: 0.06em;';
+leftTitle.textContent = '左手';
+guide.appendChild(leftTitle);
+
+leftHand.forEach(n => {
   const row = document.createElement('div');
   row.className = 'guide-row';
   row.innerHTML = `<span class="guide-fingers">${n.label}</span><span class="guide-note">${n.name}</span>`;
@@ -452,10 +477,12 @@ function dist(a, b) {
   return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
 }
 
-function detectPinches(lm) {
+function detectPinches(lm, handedness) {
   const pinched = new Set();
   const ref = dist(lm[0], lm[9]);
   NOTE_MAP.forEach((n, ni) => {
+    // 手が一致する音階のみ判定
+    if (n.hand !== handedness) return;
     const d = dist(lm[FINGERTIPS[n.fingers[0]]], lm[FINGERTIPS[n.fingers[1]]]);
     if (d < ref * 0.38) pinched.add(ni);
   });
@@ -526,6 +553,8 @@ const statusDot  = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
 let lastPinched = new Set();
+let lastDetectionTime = 0;
+const TRACKING_TIMEOUT = 200; // 200msトラッキングが途切れたら音を停止
 
 function onResults(results) {
   const w = canvas.width;
@@ -536,21 +565,38 @@ function onResults(results) {
   let allPinched = new Set();
 
   if (results.multiHandLandmarks?.length) {
+    lastDetectionTime = Date.now();
     statusDot.className = 'detecting';
     statusText.textContent = `手を検出中 (${results.multiHandLandmarks.length}本)`;
 
-    results.multiHandLandmarks.forEach((lm) => {
-      const pinched = detectPinches(lm);
+    results.multiHandLandmarks.forEach((lm, idx) => {
+      // MediaPipeは左右反転するので注意（RightとLeftが逆）
+      const handedness = results.multiHandedness?.[idx]?.label || 'Right';
+      const pinched = detectPinches(lm, handedness);
       pinched.forEach(p => allPinched.add(p));
       drawHand(ctx2d, lm, w, h, pinched);
     });
   } else {
+    // 手が検出されない場合
+    if (Date.now() - lastDetectionTime > TRACKING_TIMEOUT) {
+      // トラッキング途切れ: 全ての音を停止
+      lastPinched.forEach(ni => stopNote(ni));
+      lastPinched.clear();
+    }
     statusDot.className = 'active';
     statusText.textContent = 'カメラ稼働中';
   }
 
-  allPinched.forEach(ni => { if (!lastPinched.has(ni)) startNote(NOTE_MAP[ni].freq, ni); });
-  lastPinched.forEach(ni => { if (!allPinched.has(ni)) stopNote(ni); });
+  // 新しくピンチされた音を開始
+  allPinched.forEach(ni => { 
+    if (!lastPinched.has(ni)) startNote(NOTE_MAP[ni].freq, ni); 
+  });
+  
+  // ピンチが解除された音を停止
+  lastPinched.forEach(ni => { 
+    if (!allPinched.has(ni)) stopNote(ni); 
+  });
+  
   lastPinched = allPinched;
 
   NOTE_MAP.forEach((_, i) => {
