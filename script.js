@@ -39,10 +39,14 @@ function applyKeyMode() {
 }
 
 // ── 半音傾きモード ────────────────────────────────────
-const semiByHand       = { Right: 0, Left: 0 };  // -1=♭ / 0=♮ / +1=♯
+const semiByHand         = { Right: 0, Left: 0 };  // -1=♭ / 0=♮ / +1=♯
 const smoothedTiltByHand = { Right: 0, Left: 0 };
-const TILT_ALPHA       = 0.25;
-let   tiltThreshold    = 0.30;  // ラジアン（約17°）、スライダーで調整可
+const TILT_ALPHA         = 0.25;
+let   tiltThreshold      = 0.30;  // ラジアン（約17°）、スライダーで調整可
+
+// 半音・オクターブの急速切り替えによる AudioNode 大量生成を防ぐクールダウン
+const lastHandStateChange = { Right: 0, Left: 0 };
+const HAND_CHANGE_MS      = 150;  // ms
 
 // 表示座標系（mirrored）での手の傾き角度を返す
 function getDisplayTilt(landmarks) {
@@ -276,6 +280,8 @@ function startNote(freq, key) {
     clearTimeout(noteReleaseTimers[key]);
     delete noteReleaseTimers[key];
   }
+  const ctx = getCtx();
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   activeOsc[key] = createNote(freq);
 }
 
@@ -610,14 +616,17 @@ function onResults(results) {
 
     results.multiHandLandmarks.forEach((lm, idx) => {
       const handedness = results.multiHandedness?.[idx]?.label || 'Right';
+      const nowMs      = Date.now();
+      const canChange  = nowMs - lastHandStateChange[handedness] >= HAND_CHANGE_MS;
 
       // 傾き → 半音シフト（常時有効）
       const rawTilt = getDisplayTilt(lm);
       smoothedTiltByHand[handedness] =
         TILT_ALPHA * rawTilt + (1 - TILT_ALPHA) * smoothedTiltByHand[handedness];
       const newSemi = computeSemitone(smoothedTiltByHand[handedness], semiByHand[handedness]);
-      if (newSemi !== semiByHand[handedness]) {
+      if (newSemi !== semiByHand[handedness] && canChange) {
         semiByHand[handedness] = newSemi;
+        lastHandStateChange[handedness] = nowMs;
         stopHandNotes(handedness);
       }
 
@@ -627,8 +636,9 @@ function onResults(results) {
           ? size
           : HAND_SIZE_ALPHA * size + (1 - HAND_SIZE_ALPHA) * smoothedSizeByHand[handedness];
         const newOctave = computeOctave(smoothedSizeByHand[handedness]);
-        if (newOctave !== octaveByHand[handedness]) {
+        if (newOctave !== octaveByHand[handedness] && canChange) {
           octaveByHand[handedness] = newOctave;
+          lastHandStateChange[handedness] = nowMs;
           stopHandNotes(handedness);
         }
       }
@@ -726,8 +736,12 @@ async function startCamera() {
     document.getElementById('semi-cam-bar').style.display = 'flex';
 
     (async function loop() {
-      if (video.readyState >= 2) {
-        await hands.send({ image: video });
+      try {
+        if (video.readyState >= 2) {
+          await hands.send({ image: video });
+        }
+      } catch (e) {
+        // MediaPipe 内部エラーはループを止めず次フレームへ
       }
       requestAnimationFrame(loop);
     })();
