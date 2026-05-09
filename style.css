@@ -372,6 +372,104 @@ main {
   text-align: right;
 }
 
+/* ── オクターブモードパネル ── */
+#octave-panel {
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#oct-panel-label {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#octave-mode-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+#octave-mode-btn:hover  { background: #2a2a32; border-color: var(--green); color: var(--green-light); }
+#octave-mode-btn.active {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green-light);
+}
+
+#oct-panel-segs {
+  display: none;
+  gap: 6px;
+  flex: 1;
+}
+
+#oct-panel-segs.visible { display: flex; }
+
+/* ── オクターブセグメント（パネル・カメラ共通） ── */
+.oct-seg {
+  padding: 5px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text3);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  line-height: 1.3;
+}
+
+.oct-seg small { font-size: 9px; font-weight: 400; display: block; letter-spacing: 0.03em; }
+
+.oct-seg.oct-active-low  { background: rgba(239,159,39,0.18); border-color: var(--amber); color: var(--amber); }
+.oct-seg.oct-active-mid  { background: var(--green-bg); border-color: var(--green); color: var(--green-light); }
+.oct-seg.oct-active-high { background: rgba(100,160,255,0.18); border-color: #6ab0ff; color: #a8ccff; }
+
+/* ── カメラ内オクターブオーバーレイ ── */
+#octave-cam-bar {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#octave-cam-bar.visible { display: flex; }
+
+#oct-cam-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+
+#octave-cam-bar .oct-seg {
+  font-size: 11px;
+  padding: 3px 9px;
+  background: rgba(14,14,16,0.75);
+}
+
+#octave-cam-bar .oct-seg small { font-size: 8px; }
+
 /* ── レスポンシブ ── */
 @media (max-width: 520px) {
   .guide-columns { grid-template-columns: 1fr; }

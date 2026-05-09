@@ -12,6 +12,37 @@ const NOTE_MAP = [
 
 const FINGERTIPS = [4, 8, 12, 16, 20];
 
+// ── オクターブモード ───────────────────────────────────
+let octaveMode    = false;
+let currentOctave = 0;      // -1 / 0 / +1
+let smoothedSize  = null;   // EMA 平滑化済みの手のサイズ
+
+const HAND_SIZE_ALPHA  = 0.18;  // EMA 係数（小さいほど滑らか）
+const OCT_CLOSE_THR    = 0.19;  // refDist > この値 → 近い → 低音域
+const OCT_FAR_THR      = 0.11;  // refDist < この値 → 遠い → 高音域
+
+function computeOctave(size) {
+  if (size > OCT_CLOSE_THR) return -1;
+  if (size < OCT_FAR_THR)   return  1;
+  return 0;
+}
+
+const octSegPanel  = { low: null, mid: null, high: null };
+const octSegCam    = { low: null, mid: null, high: null };
+
+function updateOctaveUI(octave) {
+  const classes = { low: 'oct-active-low', mid: 'oct-active-mid', high: 'oct-active-high' };
+  const mapping  = { '-1': 'low', '0': 'mid', '1': 'high' };
+  const active   = mapping[String(octave)];
+  ['low', 'mid', 'high'].forEach(k => {
+    const cls = classes[k];
+    [octSegPanel[k], octSegCam[k]].forEach(el => {
+      if (!el) return;
+      el.classList.toggle(cls, k === active);
+    });
+  });
+}
+
 // ── AudioContext ───────────────────────────────────────
 let audioCtx = null;
 const activeOsc = {};
@@ -409,6 +440,18 @@ const statusDot    = document.getElementById('status-dot');
 const statusText   = document.getElementById('status-text');
 const cameraWrap   = document.getElementById('camera-wrap');
 
+// オクターブモード DOM
+const octaveModeBtn   = document.getElementById('octave-mode-btn');
+const octPanelSegs    = document.getElementById('oct-panel-segs');
+const octCamBar       = document.getElementById('octave-cam-bar');
+octSegPanel.low  = document.getElementById('oct-p-low');
+octSegPanel.mid  = document.getElementById('oct-p-mid');
+octSegPanel.high = document.getElementById('oct-p-high');
+octSegCam.low    = document.getElementById('oct-cam-low');
+octSegCam.mid    = document.getElementById('oct-cam-mid');
+octSegCam.high   = document.getElementById('oct-cam-high');
+updateOctaveUI(0);
+
 let lastPinched = new Set();
 let lastDetectionTime = 0;
 let showCameraImage = true;
@@ -452,6 +495,23 @@ function onResults(results) {
     statusDot.className = 'detecting';
     statusText.textContent = `手を検出中 (${results.multiHandLandmarks.length}本)`;
 
+    // オクターブモード: 全手の平均サイズからオクターブ決定
+    if (octaveMode) {
+      let totalSize = 0;
+      results.multiHandLandmarks.forEach(lm => { totalSize += dist(lm[0], lm[9]); });
+      const avgSize = totalSize / results.multiHandLandmarks.length;
+      smoothedSize = smoothedSize === null
+        ? avgSize
+        : HAND_SIZE_ALPHA * avgSize + (1 - HAND_SIZE_ALPHA) * smoothedSize;
+
+      const newOctave = computeOctave(smoothedSize);
+      if (newOctave !== currentOctave) {
+        currentOctave = newOctave;
+        forceStopAllNotes();
+        lastPinched.clear();
+      }
+    }
+
     results.multiHandLandmarks.forEach((lm, idx) => {
       const handedness = results.multiHandedness?.[idx]?.label || 'Right';
       const pinched = detectPinches(lm, handedness);
@@ -464,14 +524,24 @@ function onResults(results) {
         lastPinched.forEach(ni => stopNote(ni));
         lastPinched.clear();
       }
+      if (octaveMode) {
+        smoothedSize = null;
+        if (currentOctave !== 0) { currentOctave = 0; updateOctaveUI(0); }
+      }
     }
     statusDot.className = 'active';
     statusText.textContent = 'カメラ稼働中';
   }
 
-  // 新しくピンチされた音を開始
+  // オクターブUI更新
+  if (octaveMode) updateOctaveUI(currentOctave);
+
+  // 新しくピンチされた音を開始（オクターブシフト適用）
   allPinched.forEach(ni => {
-    if (!lastPinched.has(ni)) startNote(NOTE_MAP[ni].freq, ni);
+    if (!lastPinched.has(ni)) {
+      const freq = NOTE_MAP[ni].freq * Math.pow(2, currentOctave);
+      startNote(freq, ni);
+    }
   });
 
   // ピンチが解除された音を停止
@@ -548,6 +618,21 @@ resetBtn.addEventListener('click', () => {
   forceStopAllNotes();
   lastPinched.clear();
   updateNoteOverlay(new Set());
+});
+
+octaveModeBtn.addEventListener('click', () => {
+  octaveMode = !octaveMode;
+  octaveModeBtn.textContent = `オクターブモード ${octaveMode ? 'ON' : 'OFF'}`;
+  octaveModeBtn.classList.toggle('active', octaveMode);
+  octPanelSegs.classList.toggle('visible', octaveMode);
+  octCamBar.classList.toggle('visible', octaveMode);
+  if (!octaveMode) {
+    currentOctave = 0;
+    smoothedSize  = null;
+    forceStopAllNotes();
+    lastPinched.clear();
+    updateOctaveUI(0);
+  }
 });
 
 document.querySelectorAll('.inst-btn').forEach(btn => {

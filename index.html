@@ -26,6 +26,12 @@
     <video id="video" playsinline></video>
     <canvas id="canvas"></canvas>
     <div id="note-overlay"></div>
+    <div id="octave-cam-bar">
+      <span id="oct-cam-label">OCTAVE</span>
+      <span class="oct-seg" id="oct-cam-low">低</span>
+      <span class="oct-seg" id="oct-cam-mid">中</span>
+      <span class="oct-seg" id="oct-cam-high">高</span>
+    </div>
     <div id="placeholder">
       <div class="placeholder-icon">🎹</div>
       <p>カメラを起動して<br>指のピンチで演奏しよう</p>
@@ -39,7 +45,18 @@
     <div id="vis-bars"></div>
   </div>
 
-  <!-- 2. 楽器選択 -->
+  <!-- 2. オクターブモード -->
+  <div id="octave-panel">
+    <div id="oct-panel-label">OCTAVE MODE</div>
+    <button id="octave-mode-btn">オクターブモード OFF</button>
+    <div id="oct-panel-segs">
+      <span class="oct-seg" id="oct-p-low">低<br><small>近い</small></span>
+      <span class="oct-seg" id="oct-p-mid">中<br><small>通常</small></span>
+      <span class="oct-seg" id="oct-p-high">高<br><small>遠い</small></span>
+    </div>
+  </div>
+
+  <!-- 3. 楽器選択 -->
   <div id="instrument-selector">
     <div id="inst-label">INSTRUMENT</div>
     <div id="inst-buttons">
@@ -52,7 +69,7 @@
     </div>
   </div>
 
-  <!-- 3. ピンチ対応表 -->
+  <!-- 4. ピンチ対応表 -->
   <div class="card">
     <div class="card-label">ピンチ対応表</div>
     <div id="guide"></div>
