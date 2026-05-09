@@ -24,13 +24,54 @@ const SCALE_PATTERNS = {
 let currentKeySemitone = 0;   // C = 0
 let currentMode        = 'major';
 
+// A♭(8) A(9) B♭(10) B(11) は中音域が高くなりすぎるため1オクターブ下げる
+const LOW_BASE_KEYS = new Set([8, 9, 10, 11]);
+
 function applyKeyMode() {
   forceStopAllNotes();
   lastPinched.clear();
   updateNoteOverlay(new Set());
-  const pattern = SCALE_PATTERNS[currentMode];
+  const pattern    = SCALE_PATTERNS[currentMode];
+  const baseOffset = LOW_BASE_KEYS.has(currentKeySemitone) ? -12 : 0;
   NOTE_MAP.forEach((n, i) => {
-    n.freq = C4_FREQ * Math.pow(2, (currentKeySemitone + pattern[i]) / 12);
+    n.freq = C4_FREQ * Math.pow(2, (currentKeySemitone + baseOffset + pattern[i]) / 12);
+  });
+}
+
+// ── 半音傾きモード ────────────────────────────────────
+const semiByHand       = { Right: 0, Left: 0 };  // -1=♭ / 0=♮ / +1=♯
+const smoothedTiltByHand = { Right: 0, Left: 0 };
+const TILT_ALPHA       = 0.25;
+let   tiltThreshold    = 0.30;  // ラジアン（約17°）、スライダーで調整可
+
+// 表示座標系（mirrored）での手の傾き角度を返す
+function getDisplayTilt(landmarks) {
+  const dx = landmarks[9].x - landmarks[0].x;
+  const dy = landmarks[9].y - landmarks[0].y;
+  return Math.atan2(-dx, -dy);  // scaleX(-1) 補正
+}
+
+// ヒステリシスあり半音判定
+function computeSemitone(tilt, current) {
+  const hi = tiltThreshold, lo = tiltThreshold * 0.75;
+  if (current ===  1) return tilt >  lo ?  1 : 0;
+  if (current === -1) return tilt < -lo ? -1 : 0;
+  if (tilt >  hi)    return  1;
+  if (tilt < -hi)    return -1;
+  return 0;
+}
+
+const semiEls = { Right: null, Left: null };  // カメラ内バッジ
+
+function updateSemiUI() {
+  const SYM = { '-1': '♭', '0': '♮', '1': '♯' };
+  const CLS = { '-1': 'semi-flat', '0': 'semi-nat', '1': 'semi-sharp' };
+  ['Right', 'Left'].forEach(hand => {
+    const el = semiEls[hand];
+    if (!el) return;
+    const s = String(semiByHand[hand]);
+    el.textContent = SYM[s];
+    el.className   = `semi-badge ${CLS[s]}`;
   });
 }
 
@@ -510,7 +551,19 @@ sliderFar.addEventListener('input', () => {
   valFar.textContent = octFarThr.toFixed(2);
 });
 
+// 半音インジケータ DOM（MediaPipe "Right"=左手, "Left"=右手）
+semiEls.Right = document.getElementById('semi-cam-mpR');  // 左手バッジ
+semiEls.Left  = document.getElementById('semi-cam-mpL');  // 右手バッジ
+
+const sliderTilt = document.getElementById('slider-tilt');
+const valTilt    = document.getElementById('val-tilt');
+sliderTilt.addEventListener('input', () => {
+  tiltThreshold = parseFloat(sliderTilt.value);
+  valTilt.textContent = tiltThreshold.toFixed(2);
+});
+
 updateOctaveUI(0);
+updateSemiUI();
 
 let lastPinched = new Set();
 let lastDetectionTime = 0;
@@ -558,6 +611,16 @@ function onResults(results) {
     results.multiHandLandmarks.forEach((lm, idx) => {
       const handedness = results.multiHandedness?.[idx]?.label || 'Right';
 
+      // 傾き → 半音シフト（常時有効）
+      const rawTilt = getDisplayTilt(lm);
+      smoothedTiltByHand[handedness] =
+        TILT_ALPHA * rawTilt + (1 - TILT_ALPHA) * smoothedTiltByHand[handedness];
+      const newSemi = computeSemitone(smoothedTiltByHand[handedness], semiByHand[handedness]);
+      if (newSemi !== semiByHand[handedness]) {
+        semiByHand[handedness] = newSemi;
+        stopHandNotes(handedness);
+      }
+
       if (octaveMode) {
         const size = dist(lm[0], lm[9]);
         smoothedSizeByHand[handedness] = smoothedSizeByHand[handedness] === null
@@ -580,6 +643,10 @@ function onResults(results) {
         lastPinched.forEach(ni => stopNote(ni));
         lastPinched.clear();
       }
+      semiByHand.Right = 0;
+      semiByHand.Left  = 0;
+      smoothedTiltByHand.Right = 0;
+      smoothedTiltByHand.Left  = 0;
       if (octaveMode) {
         smoothedSizeByHand.Right = null;
         smoothedSizeByHand.Left  = null;
@@ -592,7 +659,8 @@ function onResults(results) {
     statusText.textContent = 'カメラ稼働中';
   }
 
-  // オクターブUI更新
+  // UI 更新
+  updateSemiUI();
   if (octaveMode) {
     updateOctaveUI();
     if (octSizeDisplay) {
@@ -602,10 +670,12 @@ function onResults(results) {
     }
   }
 
-  // 新しくピンチされた音を開始（手ごとのオクターブシフト適用）
+  // 新しくピンチされた音を開始（オクターブ + 半音シフト適用）
   allPinched.forEach(ni => {
     if (!lastPinched.has(ni)) {
-      const freq = NOTE_MAP[ni].freq * Math.pow(2, octaveByHand[NOTE_MAP[ni].hand]);
+      const hand      = NOTE_MAP[ni].hand;
+      const semitones = octaveByHand[hand] * 12 + semiByHand[hand];
+      const freq      = NOTE_MAP[ni].freq * Math.pow(2, semitones / 12);
       startNote(freq, ni);
     }
   });
@@ -653,6 +723,7 @@ async function startCamera() {
     // カメラ画像トグルを有効化
     camToggleBtn.disabled = false;
     camToggleBtn.textContent = '📷 カメラ画像 OFF';
+    document.getElementById('semi-cam-bar').style.display = 'flex';
 
     (async function loop() {
       if (video.readyState >= 2) {
@@ -684,6 +755,9 @@ resetBtn.addEventListener('click', () => {
   forceStopAllNotes();
   lastPinched.clear();
   updateNoteOverlay(new Set());
+  semiByHand.Right = 0; semiByHand.Left = 0;
+  smoothedTiltByHand.Right = 0; smoothedTiltByHand.Left = 0;
+  updateSemiUI();
 });
 
 const octControls = document.getElementById('oct-controls');

@@ -570,6 +570,48 @@ main {
 .oct-seg.oct-active-mid  { background: var(--green-bg); border-color: var(--green); color: var(--green-light); }
 .oct-seg.oct-active-high { background: rgba(100,160,255,0.18); border-color: #6ab0ff; color: #a8ccff; }
 
+/* ── カメラ内半音インジケータ（常時表示） ── */
+#semi-cam-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.semi-hand-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.semi-hand-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  min-width: 28px;
+  text-align: right;
+}
+
+.semi-badge {
+  font-size: 15px;
+  font-weight: 700;
+  width: 26px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 2px 0;
+  background: rgba(14,14,16,0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1.4;
+}
+
+.semi-nat   { color: var(--text3); }
+.semi-sharp { color: #6ab0ff; border-color: #6ab0ff; background: rgba(100,176,255,0.15); }
+.semi-flat  { color: var(--amber); border-color: var(--amber); background: rgba(239,159,39,0.15); }
+
 /* ── カメラ内オクターブオーバーレイ ── */
 #octave-cam-bar {
   display: none;
