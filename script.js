@@ -371,7 +371,10 @@ function drawHand(ctx2d, landmarks, w, h, pinched) {
     ctx2d.font = 'bold 14px sans-serif';
     ctx2d.fillStyle = '#EF9F27';
     ctx2d.textAlign = 'center';
-    ctx2d.fillText(n.name, mx, my);
+    ctx2d.save();
+    ctx2d.scale(-1, 1);          // CSS の scaleX(-1) を打ち消して文字を正立させる
+    ctx2d.fillText(n.name, -mx, my);
+    ctx2d.restore();
   });
 }
 
