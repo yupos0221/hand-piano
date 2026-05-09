@@ -13,10 +13,11 @@
   <div class="header-right">
     <div id="status">
       <div id="status-dot"></div>
-      <span id="status-text">カメラ未起動</span>
+      <span id="status-text" data-i18n="status-init">カメラ未起動</span>
     </div>
+    <button id="lang-btn">EN</button>
     <button id="cam-toggle-btn" disabled>📷 カメラ画像</button>
-    <button id="reset-btn" title="全ての音をリセット">🔄 リセット</button>
+    <button id="reset-btn" data-i18n="reset-btn" title="全ての音をリセット">🔄 リセット</button>
   </div>
 </header>
 
@@ -28,32 +29,32 @@
     <div id="note-overlay"></div>
     <div id="semi-cam-bar" style="display:none">
       <div class="semi-hand-row">
-        <span class="semi-hand-label">右手</span>
+        <span class="semi-hand-label" data-i18n="hand-r">右手</span>
         <span id="semi-cam-mpL" class="semi-badge semi-nat">♮</span>
       </div>
       <div class="semi-hand-row">
-        <span class="semi-hand-label">左手</span>
+        <span class="semi-hand-label" data-i18n="hand-l">左手</span>
         <span id="semi-cam-mpR" class="semi-badge semi-nat">♮</span>
       </div>
     </div>
     <div id="octave-cam-bar">
       <div class="oct-hand-row">
-        <span class="oct-hand-label">右手</span>
-        <span class="oct-seg" id="oct-c-l-low">低</span>
-        <span class="oct-seg" id="oct-c-l-mid">中</span>
-        <span class="oct-seg" id="oct-c-l-high">高</span>
+        <span class="oct-hand-label" data-i18n="hand-r">右手</span>
+        <span class="oct-seg" id="oct-c-l-low" data-i18n="oct-low">低</span>
+        <span class="oct-seg" id="oct-c-l-mid" data-i18n="oct-mid">中</span>
+        <span class="oct-seg" id="oct-c-l-high" data-i18n="oct-high">高</span>
       </div>
       <div class="oct-hand-row">
-        <span class="oct-hand-label">左手</span>
-        <span class="oct-seg" id="oct-c-r-low">低</span>
-        <span class="oct-seg" id="oct-c-r-mid">中</span>
-        <span class="oct-seg" id="oct-c-r-high">高</span>
+        <span class="oct-hand-label" data-i18n="hand-l">左手</span>
+        <span class="oct-seg" id="oct-c-r-low" data-i18n="oct-low">低</span>
+        <span class="oct-seg" id="oct-c-r-mid" data-i18n="oct-mid">中</span>
+        <span class="oct-seg" id="oct-c-r-high" data-i18n="oct-high">高</span>
       </div>
     </div>
     <div id="placeholder">
       <div class="placeholder-icon">🎹</div>
-      <p>カメラを起動して<br>指のピンチで演奏しよう</p>
-      <button id="start-btn">カメラ起動</button>
+      <p data-i18n="placeholder-p" data-i18n-html>カメラを起動して<br>指のピンチで演奏しよう</p>
+      <button id="start-btn" data-i18n="start-btn">カメラ起動</button>
     </div>
     <div id="error-msg"></div>
   </div>
@@ -66,62 +67,62 @@
   <!-- 2. オクターブモード -->
   <div id="octave-panel">
     <div id="oct-panel-top">
-      <div id="oct-panel-label">OCTAVE MODE</div>
+      <div id="oct-panel-label" data-i18n="oct-panel-lbl">OCTAVE MODE</div>
       <button id="octave-mode-btn">オクターブモード OFF</button>
       <div id="oct-panel-segs">
         <div class="oct-hand-row">
-          <span class="oct-hand-label">右手</span>
-          <span class="oct-seg" id="oct-p-l-low">低<br><small>近い</small></span>
-          <span class="oct-seg" id="oct-p-l-mid">中<br><small>通常</small></span>
-          <span class="oct-seg" id="oct-p-l-high">高<br><small>遠い</small></span>
+          <span class="oct-hand-label" data-i18n="hand-r">右手</span>
+          <span class="oct-seg" id="oct-p-l-low"  data-i18n="oct-low"  data-i18n-sub="oct-near">低<br><small>近い</small></span>
+          <span class="oct-seg" id="oct-p-l-mid"  data-i18n="oct-mid"  data-i18n-sub="oct-normal">中<br><small>通常</small></span>
+          <span class="oct-seg" id="oct-p-l-high" data-i18n="oct-high" data-i18n-sub="oct-far">高<br><small>遠い</small></span>
         </div>
         <div class="oct-hand-row">
-          <span class="oct-hand-label">左手</span>
-          <span class="oct-seg" id="oct-p-r-low">低<br><small>近い</small></span>
-          <span class="oct-seg" id="oct-p-r-mid">中<br><small>通常</small></span>
-          <span class="oct-seg" id="oct-p-r-high">高<br><small>遠い</small></span>
+          <span class="oct-hand-label" data-i18n="hand-l">左手</span>
+          <span class="oct-seg" id="oct-p-r-low"  data-i18n="oct-low"  data-i18n-sub="oct-near">低<br><small>近い</small></span>
+          <span class="oct-seg" id="oct-p-r-mid"  data-i18n="oct-mid"  data-i18n-sub="oct-normal">中<br><small>通常</small></span>
+          <span class="oct-seg" id="oct-p-r-high" data-i18n="oct-high" data-i18n-sub="oct-far">高<br><small>遠い</small></span>
         </div>
       </div>
     </div>
     <div id="oct-controls">
       <div class="oct-ctrl-row">
-        <span class="oct-ctrl-label">低 ↔ 中</span>
+        <span class="oct-ctrl-label" data-i18n="oct-ctrl-close">低 ↔ 中</span>
         <input type="range" class="oct-slider" id="slider-close" min="0.10" max="0.40" step="0.01" value="0.23">
         <span class="oct-ctrl-val" id="val-close">0.23</span>
       </div>
       <div class="oct-ctrl-row">
-        <span class="oct-ctrl-label">中 ↔ 高</span>
+        <span class="oct-ctrl-label" data-i18n="oct-ctrl-far">中 ↔ 高</span>
         <input type="range" class="oct-slider" id="slider-far" min="0.05" max="0.30" step="0.01" value="0.13">
         <span class="oct-ctrl-val" id="val-far">0.13</span>
       </div>
-      <div class="oct-ctrl-hint">手のサイズ（参考）: <span id="oct-size-display">—</span></div>
+      <div class="oct-ctrl-hint"><span data-i18n="oct-size-hint">手のサイズ（参考）</span>: <span id="oct-size-display">—</span></div>
     </div>
   </div>
 
   <!-- 3. 楽器選択 -->
   <div id="instrument-selector">
-    <div id="inst-label">INSTRUMENT</div>
+    <div id="inst-label" data-i18n="inst-lbl">INSTRUMENT</div>
     <div id="inst-buttons">
-      <button class="inst-btn active" data-inst="piano">ピアノ</button>
-      <button class="inst-btn" data-inst="trumpet">トランペット</button>
-      <button class="inst-btn" data-inst="guitar">ギター</button>
-      <button class="inst-btn" data-inst="clarinet">クラリネット</button>
-      <button class="inst-btn" data-inst="flute">フルート</button>
-      <button class="inst-btn" data-inst="bell">ベル</button>
+      <button class="inst-btn active" data-inst="piano"    data-i18n="inst-piano">ピアノ</button>
+      <button class="inst-btn" data-inst="trumpet"  data-i18n="inst-trumpet">トランペット</button>
+      <button class="inst-btn" data-inst="guitar"   data-i18n="inst-guitar">ギター</button>
+      <button class="inst-btn" data-inst="clarinet" data-i18n="inst-clarinet">クラリネット</button>
+      <button class="inst-btn" data-inst="flute"    data-i18n="inst-flute">フルート</button>
+      <button class="inst-btn" data-inst="bell"     data-i18n="inst-bell">ベル</button>
     </div>
   </div>
 
   <!-- 4. 調選択 -->
   <div id="tonality-panel">
     <div class="ton-row">
-      <div class="ton-section-label">TONALITY</div>
+      <div class="ton-section-label" data-i18n="ton-lbl">TONALITY</div>
       <div id="ton-mode-btns">
-        <button class="ton-mode-btn active" data-mode="major">長調</button>
-        <button class="ton-mode-btn" data-mode="minor">短調</button>
+        <button class="ton-mode-btn active" data-mode="major" data-i18n="ton-major">長調</button>
+        <button class="ton-mode-btn" data-mode="minor" data-i18n="ton-minor">短調</button>
       </div>
     </div>
     <div class="ton-row">
-      <span class="ton-group-label">♯系</span>
+      <span class="ton-group-label" data-i18n="ton-sharp">♯系</span>
       <div class="ton-key-btns">
         <button class="ton-key-btn active" data-semitone="0">C</button>
         <button class="ton-key-btn" data-semitone="7">G</button>
@@ -133,13 +134,7 @@
       </div>
     </div>
     <div class="ton-row">
-      <span class="ton-section-label" style="min-width:72px">傾き感度</span>
-      <input type="range" id="slider-tilt" class="oct-slider" min="0.10" max="0.60" step="0.01" value="0.30">
-      <span class="oct-ctrl-val" id="val-tilt">0.30</span>
-      <span style="font-size:10px;color:var(--text3);margin-left:4px">左♭ ← → ♯右</span>
-    </div>
-    <div class="ton-row">
-      <span class="ton-group-label">♭系</span>
+      <span class="ton-group-label" data-i18n="ton-flat">♭系</span>
       <div class="ton-key-btns">
         <button class="ton-key-btn" data-semitone="5">F</button>
         <button class="ton-key-btn" data-semitone="10">B♭</button>
@@ -149,11 +144,17 @@
         <button class="ton-key-btn" data-semitone="6">G♭</button>
       </div>
     </div>
+    <div class="ton-row">
+      <span class="ton-section-label" style="min-width:72px" data-i18n="tilt-lbl">傾き感度</span>
+      <input type="range" id="slider-tilt" class="oct-slider" min="0.10" max="0.60" step="0.01" value="0.30">
+      <span class="oct-ctrl-val" id="val-tilt">0.30</span>
+      <span style="font-size:10px;color:var(--text3);margin-left:4px" data-i18n="tilt-hint">左♭ ← → ♯右</span>
+    </div>
   </div>
 
   <!-- 5. ピンチ対応表 -->
   <div class="card">
-    <div class="card-label">ピンチ対応表</div>
+    <div class="card-label" data-i18n="guide-lbl">ピンチ対応表</div>
     <div id="guide"></div>
   </div>
 </main>

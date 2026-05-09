@@ -56,6 +56,7 @@ header {
 }
 
 /* ── ヘッダーボタン ── */
+#lang-btn,
 #cam-toggle-btn,
 #reset-btn {
   padding: 6px 14px;
@@ -68,6 +69,18 @@ header {
   color: var(--text2);
   transition: all 0.15s;
   letter-spacing: 0.02em;
+}
+
+#lang-btn {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  min-width: 34px;
+}
+
+#lang-btn:hover {
+  background: #2a2a32;
+  border-color: var(--green);
+  color: var(--green-light);
 }
 
 #cam-toggle-btn:disabled { opacity: 0.4; cursor: default; }
