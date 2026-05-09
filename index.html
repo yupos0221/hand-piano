@@ -101,7 +101,41 @@
     </div>
   </div>
 
-  <!-- 4. ピンチ対応表 -->
+  <!-- 4. 調選択 -->
+  <div id="tonality-panel">
+    <div class="ton-row">
+      <div class="ton-section-label">TONALITY</div>
+      <div id="ton-mode-btns">
+        <button class="ton-mode-btn active" data-mode="major">長調</button>
+        <button class="ton-mode-btn" data-mode="minor">短調</button>
+      </div>
+    </div>
+    <div class="ton-row">
+      <span class="ton-group-label">♯系</span>
+      <div class="ton-key-btns">
+        <button class="ton-key-btn active" data-semitone="0">C</button>
+        <button class="ton-key-btn" data-semitone="7">G</button>
+        <button class="ton-key-btn" data-semitone="2">D</button>
+        <button class="ton-key-btn" data-semitone="9">A</button>
+        <button class="ton-key-btn" data-semitone="4">E</button>
+        <button class="ton-key-btn" data-semitone="11">B</button>
+        <button class="ton-key-btn" data-semitone="6">F♯</button>
+      </div>
+    </div>
+    <div class="ton-row">
+      <span class="ton-group-label">♭系</span>
+      <div class="ton-key-btns">
+        <button class="ton-key-btn" data-semitone="5">F</button>
+        <button class="ton-key-btn" data-semitone="10">B♭</button>
+        <button class="ton-key-btn" data-semitone="3">E♭</button>
+        <button class="ton-key-btn" data-semitone="8">A♭</button>
+        <button class="ton-key-btn" data-semitone="1">D♭</button>
+        <button class="ton-key-btn" data-semitone="6">G♭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ピンチ対応表 -->
   <div class="card">
     <div class="card-label">ピンチ対応表</div>
     <div id="guide"></div>

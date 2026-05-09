@@ -12,6 +12,28 @@ const NOTE_MAP = [
 
 const FINGERTIPS = [4, 8, 12, 16, 20];
 
+// ── 調（キー・モード） ────────────────────────────────
+const C4_FREQ = 261.63;
+
+// 各スケールの根音からの半音間隔
+const SCALE_PATTERNS = {
+  major: [0, 2, 4, 5, 7, 9, 11, 12],  // 長音階
+  minor: [0, 2, 3, 5, 7, 8, 10, 12],  // 自然短音階
+};
+
+let currentKeySemitone = 0;   // C = 0
+let currentMode        = 'major';
+
+function applyKeyMode() {
+  forceStopAllNotes();
+  lastPinched.clear();
+  updateNoteOverlay(new Set());
+  const pattern = SCALE_PATTERNS[currentMode];
+  NOTE_MAP.forEach((n, i) => {
+    n.freq = C4_FREQ * Math.pow(2, (currentKeySemitone + pattern[i]) / 12);
+  });
+}
+
 // ── オクターブモード ───────────────────────────────────
 let octaveMode    = false;
 const octaveByHand      = { Right: 0, Left: 0 };    // 手ごとのオクターブ (-1/0/+1)
@@ -693,6 +715,26 @@ document.querySelectorAll('.inst-btn').forEach(btn => {
     currentInstrument = btn.dataset.inst;
     document.querySelectorAll('.inst-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+  });
+});
+
+document.querySelectorAll('.ton-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('active')) return;
+    currentMode = btn.dataset.mode;
+    document.querySelectorAll('.ton-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyKeyMode();
+  });
+});
+
+document.querySelectorAll('.ton-key-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('active')) return;
+    currentKeySemitone = parseInt(btn.dataset.semitone);
+    document.querySelectorAll('.ton-key-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyKeyMode();
   });
 });
 
