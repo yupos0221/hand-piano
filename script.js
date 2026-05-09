@@ -18,12 +18,12 @@ let currentOctave = 0;      // -1 / 0 / +1
 let smoothedSize  = null;   // EMA 平滑化済みの手のサイズ
 
 const HAND_SIZE_ALPHA  = 0.18;  // EMA 係数（小さいほど滑らか）
-const OCT_CLOSE_THR    = 0.19;  // refDist > この値 → 近い → 低音域
-const OCT_FAR_THR      = 0.11;  // refDist < この値 → 遠い → 高音域
+let octCloseThr = 0.23;  // refDist > この値 → 近い → 低音域
+let octFarThr   = 0.13;  // refDist < この値 → 遠い → 高音域
 
 function computeOctave(size) {
-  if (size > OCT_CLOSE_THR) return -1;
-  if (size < OCT_FAR_THR)   return  1;
+  if (size > octCloseThr) return -1;
+  if (size < octFarThr)   return  1;
   return 0;
 }
 
@@ -450,6 +450,31 @@ octSegPanel.high = document.getElementById('oct-p-high');
 octSegCam.low    = document.getElementById('oct-cam-low');
 octSegCam.mid    = document.getElementById('oct-cam-mid');
 octSegCam.high   = document.getElementById('oct-cam-high');
+
+const sliderClose   = document.getElementById('slider-close');
+const sliderFar     = document.getElementById('slider-far');
+const valClose      = document.getElementById('val-close');
+const valFar        = document.getElementById('val-far');
+const octSizeDisplay = document.getElementById('oct-size-display');
+
+sliderClose.addEventListener('input', () => {
+  const v = parseFloat(sliderClose.value);
+  if (v <= parseFloat(sliderFar.value)) {
+    sliderClose.value = (parseFloat(sliderFar.value) + 0.01).toFixed(2);
+  }
+  octCloseThr = parseFloat(sliderClose.value);
+  valClose.textContent = octCloseThr.toFixed(2);
+});
+
+sliderFar.addEventListener('input', () => {
+  const v = parseFloat(sliderFar.value);
+  if (v >= parseFloat(sliderClose.value)) {
+    sliderFar.value = (parseFloat(sliderClose.value) - 0.01).toFixed(2);
+  }
+  octFarThr = parseFloat(sliderFar.value);
+  valFar.textContent = octFarThr.toFixed(2);
+});
+
 updateOctaveUI(0);
 
 let lastPinched = new Set();
@@ -534,7 +559,12 @@ function onResults(results) {
   }
 
   // オクターブUI更新
-  if (octaveMode) updateOctaveUI(currentOctave);
+  if (octaveMode) {
+    updateOctaveUI(currentOctave);
+    if (octSizeDisplay) {
+      octSizeDisplay.textContent = smoothedSize !== null ? smoothedSize.toFixed(3) : '—';
+    }
+  }
 
   // 新しくピンチされた音を開始（オクターブシフト適用）
   allPinched.forEach(ni => {
@@ -620,18 +650,22 @@ resetBtn.addEventListener('click', () => {
   updateNoteOverlay(new Set());
 });
 
+const octControls = document.getElementById('oct-controls');
+
 octaveModeBtn.addEventListener('click', () => {
   octaveMode = !octaveMode;
   octaveModeBtn.textContent = `オクターブモード ${octaveMode ? 'ON' : 'OFF'}`;
   octaveModeBtn.classList.toggle('active', octaveMode);
   octPanelSegs.classList.toggle('visible', octaveMode);
   octCamBar.classList.toggle('visible', octaveMode);
+  octControls.classList.toggle('visible', octaveMode);
   if (!octaveMode) {
     currentOctave = 0;
     smoothedSize  = null;
     forceStopAllNotes();
     lastPinched.clear();
     updateOctaveUI(0);
+    if (octSizeDisplay) octSizeDisplay.textContent = '—';
   }
 });
 

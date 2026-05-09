@@ -47,12 +47,27 @@
 
   <!-- 2. オクターブモード -->
   <div id="octave-panel">
-    <div id="oct-panel-label">OCTAVE MODE</div>
-    <button id="octave-mode-btn">オクターブモード OFF</button>
-    <div id="oct-panel-segs">
-      <span class="oct-seg" id="oct-p-low">低<br><small>近い</small></span>
-      <span class="oct-seg" id="oct-p-mid">中<br><small>通常</small></span>
-      <span class="oct-seg" id="oct-p-high">高<br><small>遠い</small></span>
+    <div id="oct-panel-top">
+      <div id="oct-panel-label">OCTAVE MODE</div>
+      <button id="octave-mode-btn">オクターブモード OFF</button>
+      <div id="oct-panel-segs">
+        <span class="oct-seg" id="oct-p-low">低<br><small>近い</small></span>
+        <span class="oct-seg" id="oct-p-mid">中<br><small>通常</small></span>
+        <span class="oct-seg" id="oct-p-high">高<br><small>遠い</small></span>
+      </div>
+    </div>
+    <div id="oct-controls">
+      <div class="oct-ctrl-row">
+        <span class="oct-ctrl-label">低 ↔ 中</span>
+        <input type="range" class="oct-slider" id="slider-close" min="0.10" max="0.40" step="0.01" value="0.23">
+        <span class="oct-ctrl-val" id="val-close">0.23</span>
+      </div>
+      <div class="oct-ctrl-row">
+        <span class="oct-ctrl-label">中 ↔ 高</span>
+        <input type="range" class="oct-slider" id="slider-far" min="0.05" max="0.30" step="0.01" value="0.13">
+        <span class="oct-ctrl-val" id="val-far">0.13</span>
+      </div>
+      <div class="oct-ctrl-hint">手のサイズ（参考）: <span id="oct-size-display">—</span></div>
     </div>
   </div>
 

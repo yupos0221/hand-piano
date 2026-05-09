@@ -379,6 +379,12 @@ main {
   border-radius: var(--radius-lg);
   padding: 12px 16px;
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#oct-panel-top {
+  display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
@@ -419,6 +425,51 @@ main {
 }
 
 #oct-panel-segs.visible { display: flex; }
+
+/* ── オクターブ閾値スライダー ── */
+#oct-controls {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--border);
+}
+
+#oct-controls.visible { display: flex; }
+
+.oct-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oct-ctrl-label {
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+.oct-slider {
+  flex: 1;
+  accent-color: var(--green);
+  cursor: pointer;
+  height: 4px;
+}
+
+.oct-ctrl-val {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--green-light);
+  min-width: 36px;
+  text-align: right;
+}
+
+.oct-ctrl-hint {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.03em;
+}
 
 /* ── オクターブセグメント（パネル・カメラ共通） ── */
 .oct-seg {
