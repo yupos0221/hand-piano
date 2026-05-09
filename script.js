@@ -234,41 +234,36 @@ function forceStopAllNotes() {
   Object.keys(activeOsc).forEach(key => forceStopNote(key));
 }
 
-// ── UI 構築 ────────────────────────────────────────────
-const notesGrid = document.getElementById('notes-grid');
-const guide     = document.getElementById('guide');
-const cellMap   = {};
+// ── ピンチ対応表（左右2カラム）構築 ──────────────────
+(function buildGuide() {
+  const guide = document.getElementById('guide');
+  const container = document.createElement('div');
+  container.className = 'guide-columns';
 
-NOTE_MAP.forEach((n, i) => {
-  const cell = document.createElement('div');
-  cell.className = 'note-cell';
-  cell.innerHTML = `<span class="note-name">${n.name}</span><span class="note-hint">${n.label.replace('＋', '+')}</span>`;
-  notesGrid.appendChild(cell);
-  cellMap[i] = cell;
-});
+  function makeCol(title, notes) {
+    const col = document.createElement('div');
 
-// ガイドを左手・右手に分けて表示（カメラ鏡像を考慮した正しい表記）
-const rightHandNotes = NOTE_MAP.filter(n => n.hand === 'Right');
-const leftHandNotes  = NOTE_MAP.filter(n => n.hand === 'Left');
+    const heading = document.createElement('div');
+    heading.className = 'guide-col-title';
+    heading.textContent = title;
+    col.appendChild(heading);
 
-function addGuideSection(title, notes) {
-  const heading = document.createElement('div');
-  heading.className = 'guide-section-title';
-  heading.textContent = title;
-  guide.appendChild(heading);
+    notes.forEach(n => {
+      const row = document.createElement('div');
+      row.className = 'guide-row';
+      row.innerHTML = `<span class="guide-fingers">${n.label}</span><span class="guide-note">${n.name}</span>`;
+      col.appendChild(row);
+    });
+    return col;
+  }
 
-  notes.forEach(n => {
-    const row = document.createElement('div');
-    row.className = 'guide-row';
-    row.innerHTML = `<span class="guide-fingers">${n.label}</span><span class="guide-note">${n.name}</span>`;
-    guide.appendChild(row);
-  });
-}
+  // カメラ鏡像を考慮: MediaPipe "Right" → ユーザーの左手側
+  container.appendChild(makeCol('左手', NOTE_MAP.filter(n => n.hand === 'Right')));
+  container.appendChild(makeCol('右手', NOTE_MAP.filter(n => n.hand === 'Left')));
+  guide.appendChild(container);
+})();
 
-addGuideSection('左手', rightHandNotes);
-addGuideSection('右手', leftHandNotes);
-
-// ビジュアライザーのバー生成
+// ── ビジュアライザーのバー生成 ────────────────────────
 const visBars = document.getElementById('vis-bars');
 for (let i = 0; i < 28; i++) {
   const b = document.createElement('div');
@@ -293,6 +288,19 @@ function animateBars(activeNotes) {
     }
   });
   visFrame++;
+}
+
+// ── 音名オーバーレイ（カメラ映像に重畳） ─────────────
+const noteOverlay = document.getElementById('note-overlay');
+
+function updateNoteOverlay(activeNotes) {
+  noteOverlay.innerHTML = '';
+  [...activeNotes].forEach(ni => {
+    const tag = document.createElement('span');
+    tag.className = 'overlay-note';
+    tag.textContent = NOTE_MAP[ni].name;
+    noteOverlay.appendChild(tag);
+  });
 }
 
 // ── ピンチ判定 ─────────────────────────────────────────
@@ -353,7 +361,7 @@ function drawHand(ctx2d, landmarks, w, h, pinched) {
     ctx2d.stroke();
   });
 
-  // ピンチ中の音名ラベル
+  // ピンチ中の音名ラベル（指の近くに表示）
   NOTE_MAP.forEach((n, ni) => {
     if (!pinched.has(ni)) return;
     const t0 = landmarks[FINGERTIPS[n.fingers[0]]];
@@ -367,26 +375,40 @@ function drawHand(ctx2d, landmarks, w, h, pinched) {
   });
 }
 
-// ── MediaPipe セットアップ ────────────────────────────
-const video       = document.getElementById('video');
-const canvas      = document.getElementById('canvas');
-const ctx2d       = canvas.getContext('2d');
-const placeholder = document.getElementById('placeholder');
-const errorMsg    = document.getElementById('error-msg');
-const startBtn    = document.getElementById('start-btn');
-const resetBtn    = document.getElementById('reset-btn');
-const statusDot   = document.getElementById('status-dot');
-const statusText  = document.getElementById('status-text');
+// ── DOM 参照 ───────────────────────────────────────────
+const video        = document.getElementById('video');
+const canvas       = document.getElementById('canvas');
+const ctx2d        = canvas.getContext('2d');
+const placeholder  = document.getElementById('placeholder');
+const errorMsg     = document.getElementById('error-msg');
+const startBtn     = document.getElementById('start-btn');
+const resetBtn     = document.getElementById('reset-btn');
+const camToggleBtn = document.getElementById('cam-toggle-btn');
+const statusDot    = document.getElementById('status-dot');
+const statusText   = document.getElementById('status-text');
 
 let lastPinched = new Set();
 let lastDetectionTime = 0;
+let showCameraImage = true;
 const TRACKING_TIMEOUT = 150; // ms: この時間トラッキングが途切れたら音を停止
 
+// ── MediaPipe コールバック ────────────────────────────
 function onResults(results) {
   const w = canvas.width;
   const h = canvas.height;
   ctx2d.clearRect(0, 0, w, h);
-  ctx2d.drawImage(results.image, 0, 0, w, h);
+
+  // カメラ画像ON: 通常表示 / OFF: シルエット表示
+  if (showCameraImage) {
+    ctx2d.drawImage(results.image, 0, 0, w, h);
+  } else {
+    ctx2d.fillStyle = '#18181c';
+    ctx2d.fillRect(0, 0, w, h);
+    ctx2d.save();
+    ctx2d.globalAlpha = 0.12; // 人の輪郭がうっすら見える程度
+    ctx2d.drawImage(results.image, 0, 0, w, h);
+    ctx2d.restore();
+  }
 
   let allPinched = new Set();
   const now = Date.now();
@@ -424,10 +446,11 @@ function onResults(results) {
   });
 
   lastPinched = allPinched;
-  NOTE_MAP.forEach((_, i) => cellMap[i].classList.toggle('active', allPinched.has(i)));
+  updateNoteOverlay(allPinched);
   animateBars([...allPinched]);
 }
 
+// ── カメラ起動 ─────────────────────────────────────────
 async function startCamera() {
   startBtn.textContent = '読み込み中...';
   startBtn.disabled = true;
@@ -460,6 +483,10 @@ async function startCamera() {
     statusText.textContent = 'カメラ稼働中';
     lastDetectionTime = Date.now();
 
+    // カメラ画像トグルを有効化
+    camToggleBtn.disabled = false;
+    camToggleBtn.textContent = '📷 カメラ画像 OFF';
+
     (async function loop() {
       if (video.readyState >= 2) {
         canvas.width  = video.videoWidth;
@@ -482,17 +509,23 @@ async function startCamera() {
 // ── イベントリスナー ───────────────────────────────────
 startBtn.addEventListener('click', startCamera);
 
+camToggleBtn.addEventListener('click', () => {
+  showCameraImage = !showCameraImage;
+  camToggleBtn.textContent = showCameraImage ? '📷 カメラ画像 OFF' : '📷 カメラ画像 ON';
+  camToggleBtn.classList.toggle('off', !showCameraImage);
+});
+
 resetBtn.addEventListener('click', () => {
   forceStopAllNotes();
   lastPinched.clear();
-  NOTE_MAP.forEach((_, i) => cellMap[i].classList.remove('active'));
+  updateNoteOverlay(new Set());
 });
 
 document.querySelectorAll('.inst-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     forceStopAllNotes();
     lastPinched.clear();
-    NOTE_MAP.forEach((_, i) => cellMap[i].classList.remove('active'));
+    updateNoteOverlay(new Set());
     currentInstrument = btn.dataset.inst;
     document.querySelectorAll('.inst-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');

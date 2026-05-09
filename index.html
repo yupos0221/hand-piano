@@ -11,18 +11,21 @@
 <header>
   <div class="logo">Hand<span>Piano</span></div>
   <div class="header-right">
-    <button id="reset-btn" title="全ての音をリセット">🔄 リセット</button>
     <div id="status">
       <div id="status-dot"></div>
       <span id="status-text">カメラ未起動</span>
     </div>
+    <button id="cam-toggle-btn" disabled>📷 カメラ画像</button>
+    <button id="reset-btn" title="全ての音をリセット">🔄 リセット</button>
   </div>
 </header>
 
 <main>
+  <!-- 1. カメラ映像（鳴っている音を重畳） -->
   <div id="camera-wrap">
     <video id="video" playsinline></video>
     <canvas id="canvas"></canvas>
+    <div id="note-overlay"></div>
     <div id="placeholder">
       <div class="placeholder-icon">🎹</div>
       <p>カメラを起動して<br>指のピンチで演奏しよう</p>
@@ -31,22 +34,12 @@
     <div id="error-msg"></div>
   </div>
 
-  <div id="right-panel">
-    <div class="card">
-      <div class="card-label">鳴っている音</div>
-      <div id="notes-grid"></div>
-    </div>
-    <div class="card">
-      <div class="card-label">ピンチ対応表</div>
-      <div id="guide"></div>
-    </div>
-  </div>
-
   <div id="visualizer">
     <div id="vis-label">SOUND</div>
     <div id="vis-bars"></div>
   </div>
 
+  <!-- 2. 楽器選択 -->
   <div id="instrument-selector">
     <div id="inst-label">INSTRUMENT</div>
     <div id="inst-buttons">
@@ -57,6 +50,12 @@
       <button class="inst-btn" data-inst="flute">フルート</button>
       <button class="inst-btn" data-inst="bell">ベル</button>
     </div>
+  </div>
+
+  <!-- 3. ピンチ対応表 -->
+  <div class="card">
+    <div class="card-label">ピンチ対応表</div>
+    <div id="guide"></div>
   </div>
 </main>
 
