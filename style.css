@@ -420,11 +420,18 @@ main {
 
 #oct-panel-segs {
   display: none;
+  flex-direction: column;
   gap: 6px;
   flex: 1;
 }
 
 #oct-panel-segs.visible { display: flex; }
+
+#oct-panel-segs .oct-hand-label {
+  font-size: 11px;
+  min-width: 32px;
+  color: var(--text2);
+}
 
 /* ── オクターブ閾値スライダー ── */
 #oct-controls {
@@ -497,7 +504,7 @@ main {
   position: absolute;
   top: 12px;
   right: 12px;
-  align-items: center;
+  flex-direction: column;
   gap: 5px;
   z-index: 10;
   pointer-events: none;
@@ -505,12 +512,18 @@ main {
 
 #octave-cam-bar.visible { display: flex; }
 
-#oct-cam-label {
-  font-size: 9px;
+.oct-hand-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.oct-hand-label {
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text3);
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  margin-right: 2px;
+  min-width: 28px;
+  text-align: right;
 }
 
 #octave-cam-bar .oct-seg {

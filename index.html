@@ -27,10 +27,18 @@
     <canvas id="canvas"></canvas>
     <div id="note-overlay"></div>
     <div id="octave-cam-bar">
-      <span id="oct-cam-label">OCTAVE</span>
-      <span class="oct-seg" id="oct-cam-low">低</span>
-      <span class="oct-seg" id="oct-cam-mid">中</span>
-      <span class="oct-seg" id="oct-cam-high">高</span>
+      <div class="oct-hand-row">
+        <span class="oct-hand-label">右手</span>
+        <span class="oct-seg" id="oct-c-l-low">低</span>
+        <span class="oct-seg" id="oct-c-l-mid">中</span>
+        <span class="oct-seg" id="oct-c-l-high">高</span>
+      </div>
+      <div class="oct-hand-row">
+        <span class="oct-hand-label">左手</span>
+        <span class="oct-seg" id="oct-c-r-low">低</span>
+        <span class="oct-seg" id="oct-c-r-mid">中</span>
+        <span class="oct-seg" id="oct-c-r-high">高</span>
+      </div>
     </div>
     <div id="placeholder">
       <div class="placeholder-icon">🎹</div>
@@ -51,9 +59,18 @@
       <div id="oct-panel-label">OCTAVE MODE</div>
       <button id="octave-mode-btn">オクターブモード OFF</button>
       <div id="oct-panel-segs">
-        <span class="oct-seg" id="oct-p-low">低<br><small>近い</small></span>
-        <span class="oct-seg" id="oct-p-mid">中<br><small>通常</small></span>
-        <span class="oct-seg" id="oct-p-high">高<br><small>遠い</small></span>
+        <div class="oct-hand-row">
+          <span class="oct-hand-label">右手</span>
+          <span class="oct-seg" id="oct-p-l-low">低<br><small>近い</small></span>
+          <span class="oct-seg" id="oct-p-l-mid">中<br><small>通常</small></span>
+          <span class="oct-seg" id="oct-p-l-high">高<br><small>遠い</small></span>
+        </div>
+        <div class="oct-hand-row">
+          <span class="oct-hand-label">左手</span>
+          <span class="oct-seg" id="oct-p-r-low">低<br><small>近い</small></span>
+          <span class="oct-seg" id="oct-p-r-mid">中<br><small>通常</small></span>
+          <span class="oct-seg" id="oct-p-r-high">高<br><small>遠い</small></span>
+        </div>
       </div>
     </div>
     <div id="oct-controls">

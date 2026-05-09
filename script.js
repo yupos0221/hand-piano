@@ -14,8 +14,8 @@ const FINGERTIPS = [4, 8, 12, 16, 20];
 
 // ── オクターブモード ───────────────────────────────────
 let octaveMode    = false;
-let currentOctave = 0;      // -1 / 0 / +1
-let smoothedSize  = null;   // EMA 平滑化済みの手のサイズ
+const octaveByHand      = { Right: 0, Left: 0 };    // 手ごとのオクターブ (-1/0/+1)
+const smoothedSizeByHand = { Right: null, Left: null }; // 手ごとの EMA 平滑サイズ
 
 const HAND_SIZE_ALPHA  = 0.18;  // EMA 係数（小さいほど滑らか）
 let octCloseThr = 0.23;  // refDist > この値 → 近い → 低音域
@@ -27,18 +27,30 @@ function computeOctave(size) {
   return 0;
 }
 
-const octSegPanel  = { low: null, mid: null, high: null };
-const octSegCam    = { low: null, mid: null, high: null };
+// MediaPipe "Right" → ユーザーの左手, "Left" → ユーザーの右手
+const octSegsPanel = { Right: {}, Left: {} };
+const octSegsCam   = { Right: {}, Left: {} };
 
-function updateOctaveUI(octave) {
-  const classes = { low: 'oct-active-low', mid: 'oct-active-mid', high: 'oct-active-high' };
-  const mapping  = { '-1': 'low', '0': 'mid', '1': 'high' };
-  const active   = mapping[String(octave)];
-  ['low', 'mid', 'high'].forEach(k => {
-    const cls = classes[k];
-    [octSegPanel[k], octSegCam[k]].forEach(el => {
-      if (!el) return;
-      el.classList.toggle(cls, k === active);
+// 手ごとに停止するノートのインデックス（NOTE_MAP の hand フィールドと対応）
+const HAND_NOTE_INDICES = { Right: [0, 1, 2, 3], Left: [4, 5, 6, 7] };
+
+function stopHandNotes(hand) {
+  HAND_NOTE_INDICES[hand].forEach(ni => {
+    forceStopNote(ni);
+    lastPinched.delete(ni);
+  });
+}
+
+function updateOctaveUI() {
+  const LEVEL_MAP  = { '-1': 'low', '0': 'mid', '1': 'high' };
+  const ACTIVE_CLS = { low: 'oct-active-low', mid: 'oct-active-mid', high: 'oct-active-high' };
+  ['Right', 'Left'].forEach(hand => {
+    const active = LEVEL_MAP[String(octaveByHand[hand])];
+    ['low', 'mid', 'high'].forEach(level => {
+      const cls = ACTIVE_CLS[level];
+      [octSegsPanel[hand][level], octSegsCam[hand][level]].forEach(el => {
+        if (el) el.classList.toggle(cls, level === active);
+      });
     });
   });
 }
@@ -444,12 +456,13 @@ const cameraWrap   = document.getElementById('camera-wrap');
 const octaveModeBtn   = document.getElementById('octave-mode-btn');
 const octPanelSegs    = document.getElementById('oct-panel-segs');
 const octCamBar       = document.getElementById('octave-cam-bar');
-octSegPanel.low  = document.getElementById('oct-p-low');
-octSegPanel.mid  = document.getElementById('oct-p-mid');
-octSegPanel.high = document.getElementById('oct-p-high');
-octSegCam.low    = document.getElementById('oct-cam-low');
-octSegCam.mid    = document.getElementById('oct-cam-mid');
-octSegCam.high   = document.getElementById('oct-cam-high');
+['Right', 'Left'].forEach(hand => {
+  const k = hand === 'Right' ? 'r' : 'l';
+  ['low', 'mid', 'high'].forEach(level => {
+    octSegsPanel[hand][level] = document.getElementById(`oct-p-${k}-${level}`);
+    octSegsCam[hand][level]   = document.getElementById(`oct-c-${k}-${level}`);
+  });
+});
 
 const sliderClose   = document.getElementById('slider-close');
 const sliderFar     = document.getElementById('slider-far');
@@ -520,25 +533,21 @@ function onResults(results) {
     statusDot.className = 'detecting';
     statusText.textContent = `手を検出中 (${results.multiHandLandmarks.length}本)`;
 
-    // オクターブモード: 全手の平均サイズからオクターブ決定
-    if (octaveMode) {
-      let totalSize = 0;
-      results.multiHandLandmarks.forEach(lm => { totalSize += dist(lm[0], lm[9]); });
-      const avgSize = totalSize / results.multiHandLandmarks.length;
-      smoothedSize = smoothedSize === null
-        ? avgSize
-        : HAND_SIZE_ALPHA * avgSize + (1 - HAND_SIZE_ALPHA) * smoothedSize;
-
-      const newOctave = computeOctave(smoothedSize);
-      if (newOctave !== currentOctave) {
-        currentOctave = newOctave;
-        forceStopAllNotes();
-        lastPinched.clear();
-      }
-    }
-
     results.multiHandLandmarks.forEach((lm, idx) => {
       const handedness = results.multiHandedness?.[idx]?.label || 'Right';
+
+      if (octaveMode) {
+        const size = dist(lm[0], lm[9]);
+        smoothedSizeByHand[handedness] = smoothedSizeByHand[handedness] === null
+          ? size
+          : HAND_SIZE_ALPHA * size + (1 - HAND_SIZE_ALPHA) * smoothedSizeByHand[handedness];
+        const newOctave = computeOctave(smoothedSizeByHand[handedness]);
+        if (newOctave !== octaveByHand[handedness]) {
+          octaveByHand[handedness] = newOctave;
+          stopHandNotes(handedness);
+        }
+      }
+
       const pinched = detectPinches(lm, handedness);
       pinched.forEach(p => allPinched.add(p));
       drawHand(ctx2d, lm, pinched);
@@ -550,8 +559,11 @@ function onResults(results) {
         lastPinched.clear();
       }
       if (octaveMode) {
-        smoothedSize = null;
-        if (currentOctave !== 0) { currentOctave = 0; updateOctaveUI(0); }
+        smoothedSizeByHand.Right = null;
+        smoothedSizeByHand.Left  = null;
+        octaveByHand.Right = 0;
+        octaveByHand.Left  = 0;
+        updateOctaveUI();
       }
     }
     statusDot.className = 'active';
@@ -560,16 +572,18 @@ function onResults(results) {
 
   // オクターブUI更新
   if (octaveMode) {
-    updateOctaveUI(currentOctave);
+    updateOctaveUI();
     if (octSizeDisplay) {
-      octSizeDisplay.textContent = smoothedSize !== null ? smoothedSize.toFixed(3) : '—';
+      const r = smoothedSizeByHand.Left  !== null ? smoothedSizeByHand.Left.toFixed(3)  : '—';
+      const l = smoothedSizeByHand.Right !== null ? smoothedSizeByHand.Right.toFixed(3) : '—';
+      octSizeDisplay.textContent = `右手:${r}  左手:${l}`;
     }
   }
 
-  // 新しくピンチされた音を開始（オクターブシフト適用）
+  // 新しくピンチされた音を開始（手ごとのオクターブシフト適用）
   allPinched.forEach(ni => {
     if (!lastPinched.has(ni)) {
-      const freq = NOTE_MAP[ni].freq * Math.pow(2, currentOctave);
+      const freq = NOTE_MAP[ni].freq * Math.pow(2, octaveByHand[NOTE_MAP[ni].hand]);
       startNote(freq, ni);
     }
   });
@@ -660,11 +674,13 @@ octaveModeBtn.addEventListener('click', () => {
   octCamBar.classList.toggle('visible', octaveMode);
   octControls.classList.toggle('visible', octaveMode);
   if (!octaveMode) {
-    currentOctave = 0;
-    smoothedSize  = null;
+    octaveByHand.Right = 0;
+    octaveByHand.Left  = 0;
+    smoothedSizeByHand.Right = null;
+    smoothedSizeByHand.Left  = null;
     forceStopAllNotes();
     lastPinched.clear();
-    updateOctaveUI(0);
+    updateOctaveUI();
     if (octSizeDisplay) octSizeDisplay.textContent = '—';
   }
 });
