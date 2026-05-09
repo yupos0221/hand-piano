@@ -389,6 +389,7 @@ const resetBtn     = document.getElementById('reset-btn');
 const camToggleBtn = document.getElementById('cam-toggle-btn');
 const statusDot    = document.getElementById('status-dot');
 const statusText   = document.getElementById('status-text');
+const cameraWrap   = document.getElementById('camera-wrap');
 
 let lastPinched = new Set();
 let lastDetectionTime = 0;
@@ -482,6 +483,9 @@ async function startCamera() {
     canvas.width  = video.videoWidth  || 640;
     canvas.height = video.videoHeight || 480;
 
+    // 実際の映像サイズに合わせてコンテナのアスペクト比を更新
+    cameraWrap.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
+
     statusDot.className = 'active';
     statusText.textContent = 'カメラ稼働中';
     lastDetectionTime = Date.now();
@@ -492,8 +496,12 @@ async function startCamera() {
 
     (async function loop() {
       if (video.readyState >= 2) {
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
+        const w = video.videoWidth, h = video.videoHeight;
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width  = w;
+          canvas.height = h;
+          cameraWrap.style.aspectRatio = `${w} / ${h}`;
+        }
         await hands.send({ image: video });
       }
       requestAnimationFrame(loop);
